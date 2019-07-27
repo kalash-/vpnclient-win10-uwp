@@ -34,7 +34,7 @@ namespace client
 
         void OnLoad(object sender, RoutedEventArgs e)
         {
-            textBlock1.Text = GetConfig(GenerateToken());
+            var t = new MPVPN.Config(GetConfig(GenerateToken()));
         }
 
         public static string GenerateToken()
