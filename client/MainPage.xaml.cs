@@ -19,6 +19,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Net;
 using System.Threading.Tasks;
+using MPVPN;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -35,6 +36,7 @@ namespace client
         void OnLoad(object sender, RoutedEventArgs e)
         {
             var t = new MPVPN.Config(GetConfig(GenerateToken()));
+            updateServersList(t.servers);
         }
 
         public static string GenerateToken()
@@ -66,6 +68,17 @@ namespace client
             using (StreamReader reader = new StreamReader(stream))
             {
                 return reader.ReadToEnd();
+            }
+        }
+
+        private void updateServersList(List<Config.Server> servers)
+        {
+            foreach (Config.Server server in servers)
+            {
+                ComboBoxItem itm = new ComboBoxItem();
+                itm.Content = server.eap_name;
+
+                serversList.Items.Add(itm);
             }
         }
     }

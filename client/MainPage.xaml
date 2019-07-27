@@ -11,14 +11,10 @@
     >
 
     <Grid>
-        <ComboBox Margin="91,131,0,0" Width="120">
-            <ComboBoxItem Content="X"/>
-            <ComboBoxItem Content="Y"/>
-            <ComboBoxItem Content="Z"/>
+        <ComboBox x:Name="serversList" Margin="0,26,0,0" Width="120" HorizontalAlignment="Center">
         </ComboBox>
-        <Button Content="Do it" Margin="342,131,0,0" VerticalAlignment="Top" Width="100" Height="100" Background="#33FF0808">
+        <Button Content="Do it" Margin="0,113,0,0" VerticalAlignment="Top" Width="100" Height="100" Background="#33FF0808" HorizontalAlignment="Center">
         </Button>
-        <TextBox x:Name="textBlock1" HorizontalAlignment="Left" Margin="342,10,0,0" Text="TextBox" TextWrapping="Wrap" VerticalAlignment="Top"/>
 
     </Grid>
 </Page>
