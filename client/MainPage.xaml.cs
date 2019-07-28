@@ -12,6 +12,9 @@ using Windows.Networking.Vpn;
 using Windows.Security.Credentials;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
+using System.Net.NetworkInformation;
+using Windows.Networking.Connectivity;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -20,6 +23,7 @@ namespace client
     public sealed partial class MainPage : Page
     {
         private List<Config.Server> serversConfigLists;
+        private const string connectionName = "mpvpn";
 
         public MainPage()
         {
@@ -27,9 +31,43 @@ namespace client
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
         }
 
-        private async Task yo(Config.Server server)
+        private async Task<VpnManagementConnectionStatus> getVPNStatus()
         {
             VpnManagementAgent mgr = new VpnManagementAgent();
+
+            var profiles = await mgr.GetProfilesAsync();
+
+            foreach(var profile in profiles)
+            {
+                var nativeProfile = profile as VpnNativeProfile;
+                if (nativeProfile != null && profile.ProfileName == connectionName)
+                {
+                    return nativeProfile.ConnectionStatus;
+                }
+            }
+
+            return VpnManagementConnectionStatus.Disconnected;
+        }
+
+        private List<string> getConnectionIP()
+        {
+            List<string> ips = new List<string>();
+
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+            foreach (NetworkInterface networkInterface in interfaces)
+            {
+                foreach(var address in networkInterface.GetIPProperties().UnicastAddresses)
+                {
+                    ips.Add(address.Address.ToString());
+                }
+            }
+
+            return ips;
+        }
+
+        private async Task doConnect(Config.Server server)
+        {
+            VpnManagementAgent manager = new VpnManagementAgent();
 
             VpnNativeProfile profile = new VpnNativeProfile()
             {
@@ -42,7 +80,10 @@ namespace client
 
             profile.Servers.Add(server.serverAddress);
 
-            VpnManagementErrorStatus profileStatus = await mgr.AddProfileFromObjectAsync(profile);
+            VpnManagementErrorStatus profileStatus = await manager.DisconnectProfileAsync(profile);
+            profileStatus = await manager.DeleteProfileAsync(profile);
+
+            profileStatus = await manager.AddProfileFromObjectAsync(profile);
 
             PasswordCredential credentials = new PasswordCredential
             {
@@ -50,7 +91,9 @@ namespace client
                 Password = server.eap_secret,
             };
 
-            VpnManagementErrorStatus connectStatus = await mgr.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
+            VpnManagementErrorStatus connectStatus = await manager.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
+
+            getVPNStatus();
         }
 
         void OnLoad(object sender, RoutedEventArgs e)
@@ -109,7 +152,9 @@ namespace client
         {
             if (serversList.SelectedIndex != -1)
             {
-                yo(serversConfigLists[serversList.SelectedIndex]);
+                doConnect(serversConfigLists[serversList.SelectedIndex]).ContinueWith((t1)=>
+                {
+                });
             }
         }
     }
