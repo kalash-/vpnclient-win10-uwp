@@ -1,25 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
-
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Net;
-using System.Threading.Tasks;
 using MPVPN;
+using Windows.Networking.Vpn;
+using Windows.Security.Credentials;
+using System.Threading.Tasks;
+using System;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -27,25 +19,56 @@ namespace client
 {
     public sealed partial class MainPage : Page
     {
+        private List<Config.Server> serversConfigLists;
+
         public MainPage()
         {
             this.InitializeComponent();
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
         }
 
+        private async Task yo(Config.Server server)
+        {
+            VpnManagementAgent mgr = new VpnManagementAgent();
+
+            VpnNativeProfile profile = new VpnNativeProfile()
+            {
+                ProfileName = server.eap_name,
+                NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
+                AlwaysOn = true,
+                UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
+                EapConfiguration = File.ReadAllText("profile.xml")
+        };
+
+            profile.Servers.Add(server.serverAddress);
+
+            VpnManagementErrorStatus profileStatus = await mgr.AddProfileFromObjectAsync(profile);
+
+            PasswordCredential credentials = new PasswordCredential
+            {
+                UserName = server.eap_name,
+                Password = server.eap_secret,
+            };
+
+            VpnManagementErrorStatus connectStatus = await mgr.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
+        }
+
         void OnLoad(object sender, RoutedEventArgs e)
         {
             var t = new MPVPN.Config(GetConfig(GenerateToken()));
-            updateServersList(t.servers);
+
+            serversConfigLists = t.servers;
+
+            updateServersList(serversConfigLists);
         }
 
         public static string GenerateToken()
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var tokenDescriptor = new SecurityTokenDescriptor 
             {
                 Subject = new ClaimsIdentity(),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes("secretsecretsecre")), SecurityAlgorithms.HmacSha256),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes("jVnPSec9iu76t4e4")), SecurityAlgorithms.HmacSha256),
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -79,6 +102,14 @@ namespace client
                 itm.Content = server.eap_name;
 
                 serversList.Items.Add(itm);
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (serversList.SelectedIndex != -1)
+            {
+                yo(serversConfigLists[serversList.SelectedIndex]);
             }
         }
     }
