@@ -12,11 +12,9 @@ using Windows.Networking.Vpn;
 using Windows.Security.Credentials;
 using System.Threading.Tasks;
 using System;
-using System.Linq;
 using System.Net.NetworkInformation;
-using Windows.Networking.Connectivity;
-
-// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
+using Windows.UI.Core;
+using Windows.ApplicationModel.Core;
 
 namespace client
 {
@@ -24,6 +22,17 @@ namespace client
     {
         private List<Config.Server> serversConfigLists;
         private const string connectionName = "mpvpn";
+
+        VpnNativeProfile profile = new VpnNativeProfile()
+        {
+            ProfileName = connectionName,
+            NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
+            AlwaysOn = true,
+            UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
+            EapConfiguration = File.ReadAllText("profile.xml")
+        };
+        VpnManagementAgent manager = new VpnManagementAgent();
+        CoreApplicationView CurrentView = CoreApplication.GetCurrentView();
 
         public MainPage()
         {
@@ -33,9 +42,7 @@ namespace client
 
         private async Task<VpnManagementConnectionStatus> getVPNStatus()
         {
-            VpnManagementAgent mgr = new VpnManagementAgent();
-
-            var profiles = await mgr.GetProfilesAsync();
+            var profiles = await manager.GetProfilesAsync();
 
             foreach(var profile in profiles)
             {
@@ -49,41 +56,37 @@ namespace client
             return VpnManagementConnectionStatus.Disconnected;
         }
 
-        private List<string> getConnectionIP()
+        private List<string> getVpnIPs()
         {
             List<string> ips = new List<string>();
 
             var interfaces = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface networkInterface in interfaces)
             {
-                foreach(var address in networkInterface.GetIPProperties().UnicastAddresses)
+                if (networkInterface.Name == connectionName)
                 {
-                    ips.Add(address.Address.ToString());
+                    foreach (var address in networkInterface.GetIPProperties().UnicastAddresses)
+                    {
+                        ips.Add(address.Address.ToString());
+                    }
+
+                    break;
                 }
             }
 
             return ips;
         }
 
-        private async Task doConnect(Config.Server server)
+        private async Task doDisconnect()
         {
-            VpnManagementAgent manager = new VpnManagementAgent();
-
-            VpnNativeProfile profile = new VpnNativeProfile()
-            {
-                ProfileName = server.eap_name,
-                NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
-                AlwaysOn = true,
-                UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
-                EapConfiguration = File.ReadAllText("profile.xml")
-        };
-
-            profile.Servers.Add(server.serverAddress);
-
             VpnManagementErrorStatus profileStatus = await manager.DisconnectProfileAsync(profile);
             profileStatus = await manager.DeleteProfileAsync(profile);
+        }
+        private async Task doConnect(Config.Server server)
+        {
+            profile.Servers.Add(server.serverAddress);
 
-            profileStatus = await manager.AddProfileFromObjectAsync(profile);
+            VpnManagementErrorStatus profileStatus = await manager.AddProfileFromObjectAsync(profile);
 
             PasswordCredential credentials = new PasswordCredential
             {
@@ -92,17 +95,17 @@ namespace client
             };
 
             VpnManagementErrorStatus connectStatus = await manager.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
-
-            getVPNStatus();
         }
 
         void OnLoad(object sender, RoutedEventArgs e)
         {
-            var t = new MPVPN.Config(GetConfig(GenerateToken()));
+            var token = new MPVPN.Config(GetConfig(GenerateToken()));
 
-            serversConfigLists = t.servers;
+            serversConfigLists = token.servers;
 
             updateServersList(serversConfigLists);
+
+            updateStatusText();
         }
 
         public static string GenerateToken()
@@ -148,13 +151,60 @@ namespace client
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void updateStatusText()
         {
-            if (serversList.SelectedIndex != -1)
+            var status = await getVPNStatus();
+
+            //todo: handle connecting and disconnecting statuses
+
+            if (status == VpnManagementConnectionStatus.Connected)
             {
-                doConnect(serversConfigLists[serversList.SelectedIndex]).ContinueWith((t1)=>
-                {
-                });
+                connectButton.Content = "Disconnect";
+            }
+            else if(status == VpnManagementConnectionStatus.Disconnected)
+            {
+                connectButton.Content = "Connect";
+            }
+
+            var message = "VPN is " + status.ToString() + "\n";
+
+            foreach (var ip in getVpnIPs())
+            {
+                message += ip + "\n";
+            }
+
+            ipsList.Text = message;
+        }
+
+        private async void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var status = await getVPNStatus();
+
+            switch (status)
+            {
+                case VpnManagementConnectionStatus.Connected:
+                    await doDisconnect().ContinueWith((t1) =>
+                    {
+                        CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                        {
+                            updateStatusText();
+                        });
+                    });
+                    break;
+
+                case VpnManagementConnectionStatus.Disconnected:
+                    if (serversList.SelectedIndex != -1)
+                    {
+                        await doDisconnect();
+                        await doConnect(serversConfigLists[serversList.SelectedIndex]).ContinueWith((t1) =>
+                        {
+                            CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                            {
+                                updateStatusText();
+                            });
+                        });
+                    }
+                    break;
             }
         }
     }
