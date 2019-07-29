@@ -21,8 +21,7 @@ namespace client
     public sealed partial class MainPage : Page
     {
         private List<Config.Server> serversConfigLists;
-
-        VpnNativeProfile profile = new VpnNativeProfile()
+        readonly VpnNativeProfile profile = new VpnNativeProfile()
         {
             ProfileName = ApplicationParameters.ConnectionName,
             NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
@@ -30,8 +29,8 @@ namespace client
             UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
             EapConfiguration = File.ReadAllText("profile.xml")
         };
-        VpnManagementAgent manager = new VpnManagementAgent();
-        CoreApplicationView CurrentView = CoreApplication.GetCurrentView();
+        readonly VpnManagementAgent manager = new VpnManagementAgent();
+        readonly CoreApplicationView CurrentView = CoreApplication.GetCurrentView();
 
         public MainPage()
         {
@@ -39,14 +38,13 @@ namespace client
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
         }
 
-        private async Task<VpnManagementConnectionStatus> getVPNStatus()
+        private async Task<VpnManagementConnectionStatus> GetVPNStatus()
         {
             var profiles = await manager.GetProfilesAsync();
 
             foreach(var profile in profiles)
             {
-                var nativeProfile = profile as VpnNativeProfile;
-                if (nativeProfile != null && profile.ProfileName == ApplicationParameters.ConnectionName)
+                if (profile is VpnNativeProfile nativeProfile && profile.ProfileName == ApplicationParameters.ConnectionName)
                 {
                     return nativeProfile.ConnectionStatus;
                 }
@@ -55,7 +53,7 @@ namespace client
             return VpnManagementConnectionStatus.Disconnected;
         }
 
-        private List<string> getVpnIPs()
+        private List<string> GetVpnIPs()
         {
             List<string> ips = new List<string>();
 
@@ -76,12 +74,12 @@ namespace client
             return ips;
         }
 
-        private async Task doDisconnect()
+        private async Task DoDisconnect()
         {
             VpnManagementErrorStatus profileStatus = await manager.DisconnectProfileAsync(profile);
             profileStatus = await manager.DeleteProfileAsync(profile);
         }
-        private async Task doConnect(Config.Server server)
+        private async Task DoConnect(Config.Server server)
         {
             profile.Servers.Add(server.serverAddress);
 
@@ -143,8 +141,10 @@ namespace client
         {
             foreach (Config.Server server in servers)
             {
-                ComboBoxItem itm = new ComboBoxItem();
-                itm.Content = server.remoteIdentifier;
+                ComboBoxItem itm = new ComboBoxItem
+                {
+                    Content = server.remoteIdentifier
+                };
 
                 serversList.Items.Add(itm);
             }
@@ -152,7 +152,7 @@ namespace client
 
         private async Task updateStatusText()
         {
-            var status = await getVPNStatus();
+            var status = await GetVPNStatus();
 
             //todo: handle connecting and disconnecting statuses
 
@@ -167,7 +167,7 @@ namespace client
 
             var message = "VPN is " + status.ToString() + "\n";
 
-            foreach (var ip in getVpnIPs())
+            foreach (var ip in GetVpnIPs())
             {
                 message += ip + "\n";
             }
@@ -177,12 +177,12 @@ namespace client
 
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
-            var status = await getVPNStatus();
+            var status = await GetVPNStatus();
 
             switch (status)
             {
                 case VpnManagementConnectionStatus.Connected:
-                    await doDisconnect().ContinueWith(async (t1) =>
+                    await DoDisconnect().ContinueWith(async (t1) =>
                     {
                         await CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                         {
@@ -194,8 +194,8 @@ namespace client
                 case VpnManagementConnectionStatus.Disconnected:
                     if (serversList.SelectedIndex != -1)
                     {
-                        await doDisconnect();
-                        await doConnect(serversConfigLists[serversList.SelectedIndex]);
+                        await DoDisconnect();
+                        await DoConnect(serversConfigLists[serversList.SelectedIndex]);
                         await CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                         {
                             await updateStatusText();
