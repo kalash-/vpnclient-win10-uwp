@@ -21,11 +21,10 @@ namespace client
     public sealed partial class MainPage : Page
     {
         private List<Config.Server> serversConfigLists;
-        private const string connectionName = "mpvpn";
 
         VpnNativeProfile profile = new VpnNativeProfile()
         {
-            ProfileName = connectionName,
+            ProfileName = ApplicationParameters.ConnectionName,
             NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
             AlwaysOn = true,
             UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
@@ -47,7 +46,7 @@ namespace client
             foreach(var profile in profiles)
             {
                 var nativeProfile = profile as VpnNativeProfile;
-                if (nativeProfile != null && profile.ProfileName == connectionName)
+                if (nativeProfile != null && profile.ProfileName == ApplicationParameters.ConnectionName)
                 {
                     return nativeProfile.ConnectionStatus;
                 }
@@ -63,7 +62,7 @@ namespace client
             var interfaces = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface networkInterface in interfaces)
             {
-                if (networkInterface.Name == connectionName)
+                if (networkInterface.Name == ApplicationParameters.ConnectionName)
                 {
                     foreach (var address in networkInterface.GetIPProperties().UnicastAddresses)
                     {
@@ -97,15 +96,16 @@ namespace client
             VpnManagementErrorStatus connectStatus = await manager.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
         }
 
-        void OnLoad(object sender, RoutedEventArgs e)
+        async void OnLoad(object sender, RoutedEventArgs e)
         {
-            var token = new MPVPN.Config(GetConfig(GenerateToken()));
+            await updateStatusText();
+
+            var config = await GetConfig(GenerateToken());
+            var token = new MPVPN.Config(config);
 
             serversConfigLists = token.servers;
 
             updateServersList(serversConfigLists);
-
-            updateStatusText();
         }
 
         public static string GenerateToken()
@@ -123,16 +123,15 @@ namespace client
             return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.yqr1EtbahXKJhiE70GtcLzJRFMxLwFEg-tB1R3H1MyY";
         }
 
-        public string GetConfig(string token)
+        public async Task<string> GetConfig(string token)
         {
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://159.65.72.139.sslip.io/api/list.json");
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(ApplicationParameters.ConfigurationURL);
             httpWebRequest.Method = "GET";
             httpWebRequest.Headers["Authorization"] = "Bearer " + token;
 
-            var responce = httpWebRequest.GetResponseAsync();
-            responce.Wait();
+            var data = await httpWebRequest.GetResponseAsync();
 
-            using (HttpWebResponse response = (HttpWebResponse) responce.Result)
+            using (HttpWebResponse response = (HttpWebResponse) data)
             using (Stream stream = response.GetResponseStream())   
             using (StreamReader reader = new StreamReader(stream))
             {
@@ -145,13 +144,13 @@ namespace client
             foreach (Config.Server server in servers)
             {
                 ComboBoxItem itm = new ComboBoxItem();
-                itm.Content = server.eap_name;
+                itm.Content = server.remoteIdentifier;
 
                 serversList.Items.Add(itm);
             }
         }
 
-        private async void updateStatusText()
+        private async Task updateStatusText()
         {
             var status = await getVPNStatus();
 
@@ -183,11 +182,11 @@ namespace client
             switch (status)
             {
                 case VpnManagementConnectionStatus.Connected:
-                    await doDisconnect().ContinueWith((t1) =>
+                    await doDisconnect().ContinueWith(async (t1) =>
                     {
-                        CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                        await CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                         {
-                            updateStatusText();
+                            await updateStatusText();
                         });
                     });
                     break;
@@ -196,12 +195,10 @@ namespace client
                     if (serversList.SelectedIndex != -1)
                     {
                         await doDisconnect();
-                        await doConnect(serversConfigLists[serversList.SelectedIndex]).ContinueWith((t1) =>
+                        await doConnect(serversConfigLists[serversList.SelectedIndex]);
+                        await CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                         {
-                            CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                            {
-                                updateStatusText();
-                            });
+                            await updateStatusText();
                         });
                     }
                     break;
