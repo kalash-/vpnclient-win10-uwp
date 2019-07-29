@@ -9,26 +9,26 @@ namespace MPVPN
     class SecureStorage
     {
         static readonly private Windows.Storage.ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
-        static public async void ProtectAsync(String strMsg)
+        static public async void ProtectAsync(string value, string name)
         {
             DataProtectionProvider Provider = new DataProtectionProvider("LOCAL=user");
 
-            var buffMsg = CryptographicBuffer.ConvertStringToBinary(strMsg, BinaryStringEncoding.Utf8);
+            var buffMsg = CryptographicBuffer.ConvertStringToBinary(value, BinaryStringEncoding.Utf8);
 
             var buffProtected = await Provider.ProtectAsync(buffMsg);
 
             var result = CryptographicBuffer.EncodeToBase64String(buffProtected);
 
-            localSettings.Values[ApplicationParameters.ConfigKey] = result;
+            localSettings.Values[name] = result;
         }
 
-        static public async Task<String> UnprotectDataAsync()
+        static public async Task<string> UnprotectDataAsync(string name)
         {
             DataProtectionProvider Provider = new DataProtectionProvider();
 
-            var data = localSettings.Values[ApplicationParameters.ConfigKey];
+            var value = localSettings.Values[name];
 
-            var buffer = CryptographicBuffer.DecodeFromBase64String(data as string);
+            var buffer = CryptographicBuffer.DecodeFromBase64String(value as string);
 
             IBuffer buffUnprotected = await Provider.UnprotectAsync(buffer);
 

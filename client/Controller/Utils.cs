@@ -39,7 +39,7 @@ namespace MPVPN
             {
                 var config = reader.ReadToEnd();
 
-                SecureStorage.ProtectAsync(config);
+                SecureStorage.ProtectAsync(config, ApplicationParameters.ConfigKey);
 
                 return config;
             }
