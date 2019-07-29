@@ -16,7 +16,7 @@ namespace MPVPN
             NativeProtocolType = VpnNativeProtocolType.IpsecIkev2,
             AlwaysOn = true,
             UserAuthenticationMethod = VpnAuthenticationMethod.Eap,
-            EapConfiguration = File.ReadAllText("profile.xml")
+            EapConfiguration = File.ReadAllText(Windows.ApplicationModel.Package.Current.InstalledLocation.Path + @"\Assets\profile.xml")
         };
         readonly VpnManagementAgent manager = new VpnManagementAgent();
 
