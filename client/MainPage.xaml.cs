@@ -27,10 +27,10 @@ namespace client
         {
             await UpdateStatusText();
 
-            var config = await Utils.GetConfig(Utils.GenerateToken());
-            var token = new MPVPN.Config(config);
+            var configText = await Utils.GetConfig(Utils.GenerateToken());
+            var config = new MPVPN.Config(configText);
 
-            serversConfigLists = token.servers;
+            serversConfigLists = config.servers;
 
             UpdateServersList(serversConfigLists);
         }

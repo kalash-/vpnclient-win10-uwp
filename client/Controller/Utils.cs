@@ -1,9 +1,9 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+﻿using JWT;
+using JWT.Algorithms;
+using JWT.Serializers;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace MPVPN
@@ -12,17 +12,9 @@ namespace MPVPN
     {
         public static string GenerateToken()
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes("jVnPSec9iu76t4e4")), SecurityAlgorithms.HmacSha256),
-            };
+            IJwtEncoder encoder = new JwtEncoder(new HMACSHA256Algorithm(), new JsonNetSerializer(), new JwtBase64UrlEncoder());
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            //return tokenHandler.WriteToken(token);
-            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.yqr1EtbahXKJhiE70GtcLzJRFMxLwFEg-tB1R3H1MyY";
+            return encoder.Encode(new Dictionary<string, object>(), ApplicationParameters.Secret);
         }
 
         public static async Task<string> GetConfig(string token)
