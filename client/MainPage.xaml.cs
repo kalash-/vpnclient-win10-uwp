@@ -98,5 +98,10 @@ namespace client
                     break;
             }
         }
+
+        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            var yo = await SecureStorage.UnprotectDataAsync();
+        }
     }
 }

@@ -37,7 +37,11 @@ namespace MPVPN
             using (Stream stream = response.GetResponseStream())
             using (StreamReader reader = new StreamReader(stream))
             {
-                return reader.ReadToEnd();
+                var config = reader.ReadToEnd();
+
+                SecureStorage.ProtectAsync(config);
+
+                return config;
             }
         }
     }

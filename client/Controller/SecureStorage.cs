@@ -8,24 +8,29 @@ namespace MPVPN
 {
     class SecureStorage
     {
-        readonly private Windows.Storage.ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
-
-        public async void ProtectAsync(String strMsg)
+        static readonly private Windows.Storage.ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
+        static public async void ProtectAsync(String strMsg)
         {
             DataProtectionProvider Provider = new DataProtectionProvider("LOCAL=user");
 
-            IBuffer buffMsg = CryptographicBuffer.ConvertStringToBinary(strMsg, BinaryStringEncoding.Utf8);
+            var buffMsg = CryptographicBuffer.ConvertStringToBinary(strMsg, BinaryStringEncoding.Utf8);
 
-            IBuffer buffProtected = await Provider.ProtectAsync(buffMsg);
+            var buffProtected = await Provider.ProtectAsync(buffMsg);
 
-            localSettings.Values[ApplicationParameters.ConfigKey] = buffProtected;
+            var result = CryptographicBuffer.EncodeToBase64String(buffProtected);
+
+            localSettings.Values[ApplicationParameters.ConfigKey] = result;
         }
 
-        public async Task<String> UnprotectDataAsync()
+        static public async Task<String> UnprotectDataAsync()
         {
             DataProtectionProvider Provider = new DataProtectionProvider();
 
-            IBuffer buffUnprotected = await Provider.UnprotectAsync(localSettings.Values[ApplicationParameters.ConfigKey] as IBuffer);
+            var data = localSettings.Values[ApplicationParameters.ConfigKey];
+
+            var buffer = CryptographicBuffer.DecodeFromBase64String(data as string);
+
+            IBuffer buffUnprotected = await Provider.UnprotectAsync(buffer);
 
             return CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, buffUnprotected);
         }
