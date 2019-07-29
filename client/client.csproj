@@ -126,6 +126,7 @@
     </Compile>
     <Compile Include="Controller\Utils.cs" />
     <Compile Include="Controller\VpnManager.cs" />
+    <Compile Include="Model\VpnException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Controller\SecureStorage.cs" />
   </ItemGroup>

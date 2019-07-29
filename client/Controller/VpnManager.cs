@@ -20,7 +20,7 @@ namespace MPVPN
         };
         readonly VpnManagementAgent manager = new VpnManagementAgent();
 
-        public async Task<VpnManagementConnectionStatus> GetVPNStatus()
+        private async Task<VpnNativeProfile> GetVPNConnectionProfile()
         {
             var profiles = await manager.GetProfilesAsync();
 
@@ -28,8 +28,20 @@ namespace MPVPN
             {
                 if (profile is VpnNativeProfile nativeProfile && profile.ProfileName == ApplicationParameters.ConnectionName)
                 {
-                    return nativeProfile.ConnectionStatus;
+                    return nativeProfile;
                 }
+            }
+
+            return null;
+        }
+
+        public async Task<VpnManagementConnectionStatus> GetVPNStatus()
+        {
+            var vpn = await GetVPNConnectionProfile();
+
+            if (vpn != null)
+            {
+                return vpn.ConnectionStatus;
             }
 
             return VpnManagementConnectionStatus.Disconnected;
@@ -58,16 +70,12 @@ namespace MPVPN
 
         public async Task DoDisconnect()
         {
-            VpnManagementErrorStatus status = await manager.DisconnectProfileAsync(profile);
-            if (status != VpnManagementErrorStatus.Ok)
-            {
-                throw new Exception("Disconnect failed. Status is " + status);
-            }
+            var vpn = await GetVPNConnectionProfile();
 
-            status = await manager.DeleteProfileAsync(profile);
-            if (status != VpnManagementErrorStatus.Ok)
+            if (vpn != null)
             {
-                throw new Exception("VPN profile delete failed. Status is " + status);
+                await manager.DisconnectProfileAsync(vpn);
+                await manager.DeleteProfileAsync(profile);
             }
         }
 
@@ -78,7 +86,7 @@ namespace MPVPN
             VpnManagementErrorStatus status = await manager.AddProfileFromObjectAsync(profile);
             if (status != VpnManagementErrorStatus.Ok)
             {
-                throw new Exception("VPN profile delete failed. Status is " + status);
+                throw new Exception("VPN profile add failed. Status is " + status);
             }
 
             PasswordCredential credentials = new PasswordCredential

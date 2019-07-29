@@ -88,37 +88,31 @@ namespace client
 
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
-            var status = await vpnManager.GetVPNStatus();
-
-            switch (status)
+            try
             {
-                case VpnManagementConnectionStatus.Connected:
-                    try
-                    {
+                var status = await vpnManager.GetVPNStatus();
+
+                switch (status)
+                {
+                    case VpnManagementConnectionStatus.Connected:
                         await vpnManager.DoDisconnect();
                         await UpdateStatusText();
-                    }
-                    catch (Exception ex)
-                    {
-                        await UpdateStatusText(ex.Message);
-                    }
-                    break;
 
-                case VpnManagementConnectionStatus.Disconnected:
-                    if (serversList.SelectedIndex != -1)
-                    {
-                        try
+                        break;
+
+                    case VpnManagementConnectionStatus.Disconnected:
+                        if (serversList.SelectedIndex != -1)
                         {
                             await vpnManager.DoDisconnect();
                             await vpnManager.DoConnect(serversConfigLists[serversList.SelectedIndex]);
                             await UpdateStatusText();
                         }
-                        catch (Exception ex)
-                        {
-                            await UpdateStatusText(ex.Message);
-                        }
-                    }
-                    break;
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                await UpdateStatusText(ex.Message);
             }
         }
 
