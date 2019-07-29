@@ -27,12 +27,20 @@ namespace client
         {
             await UpdateStatusText();
 
-            var configText = await Utils.GetConfig(Utils.GenerateToken());
-            var config = new MPVPN.Config(configText);
+            try
+            {
+                var configText = await Utils.GetConfig(Utils.GenerateToken());
+                var config = new MPVPN.Config(configText);
 
-            serversConfigLists = config.servers;
+                serversConfigLists = config.servers;
 
-            UpdateServersList(serversConfigLists);
+                UpdateServersList(serversConfigLists);
+            }
+
+            catch(System.Exception ex)
+            {
+                await UpdateStatusText(ex.Message);
+            }
         }
 
         private void UpdateServersList(List<Config.Server> servers)
@@ -48,7 +56,7 @@ namespace client
             }
         }
 
-        private async Task UpdateStatusText()
+        private async Task UpdateStatusText(string text = "")
         {
             await CurrentView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
             {
@@ -67,7 +75,7 @@ namespace client
                     connectButton.Content = "Connect";
                 }
 
-                var message = "VPN is " + status.ToString() + "\n";
+                var message = text + "\nVPN is " + status.ToString() + "\n";
 
                 foreach (var ip in vpnManager.GetVpnIPs())
                 {
@@ -85,18 +93,30 @@ namespace client
             switch (status)
             {
                 case VpnManagementConnectionStatus.Connected:
-                    await vpnManager.DoDisconnect().ContinueWith(async (t1) =>
+                    try
                     {
+                        await vpnManager.DoDisconnect();
                         await UpdateStatusText();
-                    });
+                    }
+                    catch (Exception ex)
+                    {
+                        await UpdateStatusText(ex.Message);
+                    }
                     break;
 
                 case VpnManagementConnectionStatus.Disconnected:
                     if (serversList.SelectedIndex != -1)
                     {
-                        await vpnManager.DoDisconnect();
-                        await vpnManager.DoConnect(serversConfigLists[serversList.SelectedIndex]);
-                        await UpdateStatusText();
+                        try
+                        {
+                            await vpnManager.DoDisconnect();
+                            await vpnManager.DoConnect(serversConfigLists[serversList.SelectedIndex]);
+                            await UpdateStatusText();
+                        }
+                        catch (Exception ex)
+                        {
+                            await UpdateStatusText(ex.Message);
+                        }
                     }
                     break;
             }
@@ -104,11 +124,19 @@ namespace client
 
         private async void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            var storedData = await SecureStorage.UnprotectDataAsync(ApplicationParameters.ConfigKey);
-            var messageDialog = new MessageDialog(storedData);
+            try
+            {
+                var storedData = await SecureStorage.UnprotectDataAsync(ApplicationParameters.ConfigKey);
+                var messageDialog = new MessageDialog(storedData);
 
-            messageDialog.Commands.Add(new UICommand("Close"));
-            await messageDialog.ShowAsync();            
+                messageDialog.Commands.Add(new UICommand("Close"));
+                await messageDialog.ShowAsync();
+            }
+
+            catch(Exception ex)
+            {
+                await UpdateStatusText(ex.Message);
+            }
         }
     }
 }

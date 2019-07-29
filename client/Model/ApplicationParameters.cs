@@ -8,7 +8,7 @@ namespace MPVPN
 {
     static public class ApplicationParameters
     {
-        static public string ConfigKey => "mpvpnconfig";
+        static public string ConfigKey = "mpvpnconfig";
         static public string ConnectionName = "mpvpn";
         static public string ConfigurationURL = "http://159.65.72.139.sslip.io/api/list.json";
         static public string Secret = "jVnPSec";

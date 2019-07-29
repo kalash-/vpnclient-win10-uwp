@@ -58,15 +58,28 @@ namespace MPVPN
 
         public async Task DoDisconnect()
         {
-            VpnManagementErrorStatus profileStatus = await manager.DisconnectProfileAsync(profile);
-            profileStatus = await manager.DeleteProfileAsync(profile);
+            VpnManagementErrorStatus status = await manager.DisconnectProfileAsync(profile);
+            if (status != VpnManagementErrorStatus.Ok)
+            {
+                throw new Exception("Disconnect failed. Status is " + status);
+            }
+
+            status = await manager.DeleteProfileAsync(profile);
+            if (status != VpnManagementErrorStatus.Ok)
+            {
+                throw new Exception("VPN profile delete failed. Status is " + status);
+            }
         }
 
         public async Task DoConnect(Config.Server server)
         {
             profile.Servers.Add(server.serverAddress);
 
-            VpnManagementErrorStatus profileStatus = await manager.AddProfileFromObjectAsync(profile);
+            VpnManagementErrorStatus status = await manager.AddProfileFromObjectAsync(profile);
+            if (status != VpnManagementErrorStatus.Ok)
+            {
+                throw new Exception("VPN profile delete failed. Status is " + status);
+            }
 
             PasswordCredential credentials = new PasswordCredential
             {
@@ -74,8 +87,11 @@ namespace MPVPN
                 Password = server.eap_secret,
             };
 
-            VpnManagementErrorStatus connectStatus = await manager.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
+            status = await manager.ConnectProfileWithPasswordCredentialAsync(profile, credentials);
+            if (status != VpnManagementErrorStatus.Ok)
+            {
+                throw new Exception("VPN profile delete failed. Status is " + status);
+            }
         }
-
     }
 }
