@@ -8,6 +8,7 @@ using System;
 using Windows.UI.Core;
 using Windows.ApplicationModel.Core;
 using Windows.UI.Popups;
+using Windows.UI.Xaml.Media.Imaging;
 
 namespace client
 {
@@ -139,6 +140,15 @@ namespace client
             {
                 await UpdateStatusText(ex.Message);
             }
+        }
+
+        private void ServersList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var server = serversConfigLists[serversList.SelectedIndex];
+
+            BitmapImage image = new BitmapImage(new Uri("https://www.countryflags.io/" + server.country.Substring(0, 2) + "/flat/64.png"));
+
+            flag_image.Source = image;
         }
     }
 }
