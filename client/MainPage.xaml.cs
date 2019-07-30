@@ -92,6 +92,8 @@ namespace client
         {
             try
             {
+                progress.IsActive = true;
+
                 var status = await vpnManager.GetVPNStatus();
 
                 switch (status)
@@ -115,6 +117,10 @@ namespace client
             catch (Exception ex)
             {
                 await UpdateStatusText(ex.Message);
+            }
+            finally
+            {
+                progress.IsActive = false;
             }
         }
 

@@ -15,7 +15,6 @@
         <Button x:Name="connectButton" Content="Do it" Margin="44,86,0,0" VerticalAlignment="Top" Width="100" Height="100" Background="#33FF0808" Click="Button_Click"/>
         <TextBlock x:Name="ipsList" HorizontalAlignment="Left" Margin="204,20,0,0" Text="TextBlock" TextWrapping="Wrap" VerticalAlignment="Top" Height="157" Width="380"/>
         <Button Content="Show stored data&#xD;&#xA;" Margin="44,221,0,0" VerticalAlignment="Top" Height="36" Width="241" Click="Button_Click_1"/>
-
-
+        <ProgressRing x:Name="progress" HorizontalAlignment="Left" Margin="250,159,0,0" VerticalAlignment="Top" Height="72" Width="74"/>
     </Grid>
 </Page>
