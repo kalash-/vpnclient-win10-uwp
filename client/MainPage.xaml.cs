@@ -20,7 +20,9 @@ namespace client
         public MainPage()
         {
             this.InitializeComponent();
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+#if DEBUG
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true; //set extender exception informations
+#endif
         }
 
         async void OnLoad(object sender, RoutedEventArgs e)
